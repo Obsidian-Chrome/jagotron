@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night City Live - Jagotron</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            object-position: center;
+        }
+
+        .info-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        body:hover .info-overlay {
+            opacity: 1;
+        }
+
+        .info-overlay div {
+            margin: 5px 0;
+        }
+
+        .label {
+            color: #00ffff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-overlay" id="infoOverlay">
+        <div><span class="label">Heure locale:</span> <span id="utcTime">--:--:--</span></div>
+        <div><span class="label">Position vidéo:</span> <span id="videoPos">--:--</span></div>
+    </div>
+
+    <div class="video-container">
+        <video id="videoPlayer" loop muted playsinline>
+            <source src="nightcity_24h.webm" type="video/webm">
+        </video>
+    </div>
+
+    <script>
+        const videoPlayer = document.getElementById('videoPlayer');
+        const utcTimeDisplay = document.getElementById('utcTime');
+        const videoPosDisplay = document.getElementById('videoPos');
+
+        const VIDEO_CYCLE_DURATION = 3 * 60 * 60;
+        const REAL_DAY_DURATION = 24 * 60 * 60;
+        const VIDEO_START_HOUR = 20;
+        const PLAYBACK_RATE = VIDEO_CYCLE_DURATION / REAL_DAY_DURATION;
+
+        function getLocalTimeInSeconds() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            return hours * 3600 + minutes * 60 + seconds;
+        }
+
+        function secondsToTimeString(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function calculateVideoPosition(utcSeconds) {
+            const videoStartSeconds = VIDEO_START_HOUR * 3600;
+            let adjustedSeconds = utcSeconds - videoStartSeconds;
+            
+            if (adjustedSeconds < 0) {
+                adjustedSeconds += REAL_DAY_DURATION;
+            }
+            
+            const percentageOfDay = adjustedSeconds / REAL_DAY_DURATION;
+            return percentageOfDay * VIDEO_CYCLE_DURATION;
+        }
+
+        function initializeVideo() {
+            const localSeconds = getLocalTimeInSeconds();
+            const videoPosition = calculateVideoPosition(localSeconds);
+            
+            videoPlayer.currentTime = videoPosition;
+            videoPlayer.playbackRate = PLAYBACK_RATE;
+            
+            videoPlayer.play().catch(err => {
+                console.log("Autoplay bloqué, interaction requise:", err);
+            });
+            
+            updateInfo();
+        }
+
+        function updateInfo() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            
+            utcTimeDisplay.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            if (videoPlayer.duration && !isNaN(videoPlayer.duration)) {
+                videoPosDisplay.textContent = secondsToTimeString(videoPlayer.currentTime) + ' / ' + secondsToTimeString(videoPlayer.duration);
+            }
+        }
+
+        videoPlayer.addEventListener('loadedmetadata', () => {
+            initializeVideo();
+        });
+
+        videoPlayer.addEventListener('timeupdate', () => {
+            updateInfo();
+        });
+
+        setInterval(updateInfo, 1000);
+
+        document.addEventListener('click', () => {
+            if (videoPlayer.paused) {
+                videoPlayer.play();
+            }
+        });
+    </script>
+</body>
+</html>
