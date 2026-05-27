@@ -67,30 +67,33 @@
             font-weight: bold;
         }
 
-        .loading-overlay {
+        .loading-bar {
             position: fixed;
-            top: 0;
+            bottom: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-family: 'Courier New', monospace;
-            font-size: 1.5rem;
+            width: 100%;
+            height: 3px;
+            background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
+            transition: opacity 0.3s ease;
         }
 
-        .loading-overlay.hidden {
-            display: none;
+        .loading-bar-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #00b4d8, #0096c7);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .loading-bar.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay">
-        <div>Chargement de Night City... <span id="loadingStatus">0%</span></div>
+    <div class="loading-bar" id="loadingBar">
+        <div class="loading-bar-progress" id="loadingProgress"></div>
     </div>
 
     <div class="info-overlay" id="infoOverlay">
@@ -103,13 +106,14 @@
     </div>
 
     <script>
+        
         const VIDEO_URL = 'https://github.com/Obsidian-Chrome/jagotron/releases/download/v1.0.0/nightcity_24h.webm';
         
         const videoPlayer = document.getElementById('videoPlayer');
         const utcTimeDisplay = document.getElementById('utcTime');
         const videoPosDisplay = document.getElementById('videoPos');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingStatus = document.getElementById('loadingStatus');
+        const loadingBar = document.getElementById('loadingBar');
+        const loadingProgress = document.getElementById('loadingProgress');
 
         const VIDEO_CYCLE_DURATION = 3 * 60 * 60;
         const REAL_DAY_DURATION = 24 * 60 * 60;
@@ -143,10 +147,7 @@
             return percentageOfDay * VIDEO_CYCLE_DURATION;
         }
 
-        function initializeVideo() {
-            console.log('Initialisation de la vidéo depuis:', VIDEO_URL);
-            videoPlayer.src = VIDEO_URL;
-            
+        function startVideoPlayback() {
             const localSeconds = getLocalTimeInSeconds();
             const videoPosition = calculateVideoPosition(localSeconds);
             
@@ -157,7 +158,6 @@
             
             videoPlayer.play().catch(err => {
                 console.error('Erreur de lecture:', err);
-                loadingStatus.textContent = 'Erreur: ' + err.message;
             });
             
             updateInfo();
@@ -176,10 +176,14 @@
             }
         }
 
+        // Charger la vidéo immédiatement
+        console.log('Chargement de la vidéo depuis:', VIDEO_URL);
+        videoPlayer.src = VIDEO_URL;
+
         videoPlayer.addEventListener('loadedmetadata', () => {
             console.log('Métadonnées chargées, durée:', videoPlayer.duration);
-            loadingOverlay.classList.add('hidden');
-            initializeVideo();
+            setTimeout(() => loadingBar.classList.add('hidden'), 500);
+            startVideoPlayback();
         });
 
         videoPlayer.addEventListener('progress', () => {
@@ -188,14 +192,29 @@
                 const duration = videoPlayer.duration;
                 if (duration > 0) {
                     const percent = (bufferedEnd / duration * 100).toFixed(0);
-                    loadingStatus.textContent = percent + '%';
+                    loadingProgress.style.width = percent + '%';
                 }
             }
         });
 
         videoPlayer.addEventListener('error', (e) => {
-            console.error('Erreur vidéo:', e);
-            loadingStatus.textContent = 'Erreur de chargement. Vérifiez le lien GitHub.';
+            console.error('Erreur vidéo:', videoPlayer.error);
+            const errorMessages = {
+                1: 'Chargement annulé',
+                2: 'Erreur réseau',
+                3: 'Erreur de décodage',
+                4: 'Format non supporté ou URL invalide'
+            };
+            const errorMsg = errorMessages[videoPlayer.error?.code] || 'Erreur inconnue';
+            console.error('Code erreur:', videoPlayer.error?.code, 'Message:', videoPlayer.error?.message, errorMsg);
+        });
+
+        videoPlayer.addEventListener('loadstart', () => {
+            console.log('Début du chargement de la vidéo...');
+        });
+
+        videoPlayer.addEventListener('canplay', () => {
+            console.log('Vidéo prête à être lue');
         });
 
         videoPlayer.addEventListener('timeupdate', () => {
