@@ -45,6 +45,40 @@ body::before {
     letter-spacing: 0.2rem;
 }
 
+.display-list {
+    list-style: none;
+    max-width: 600px;
+    width: 100%;
+}
+
+.display-list li {
+    margin-bottom: 1.5rem;
+}
+
+.display-list a {
+    display: block;
+    padding: 1.5rem 2rem;
+    background: rgba(10, 10, 31, 0.7);
+    border-radius: 15px;
+    text-decoration: none;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+}
+
+.display-list a:hover {
+    transform: translateX(10px);
+    background: rgba(10, 10, 31, 0.9);
+    border-color: rgba(0, 255, 255, 0.8);
+    box-shadow: 
+        0 0 40px rgba(0, 255, 255, 0.6),
+        0 0 60px rgba(255, 0, 255, 0.4);
+}
+
 .menu-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
