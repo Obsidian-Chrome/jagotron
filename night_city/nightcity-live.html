@@ -102,7 +102,7 @@
     </div>
 
     <div class="video-container">
-        <video id="videoPlayer" loop muted playsinline></video>
+        <video id="videoPlayer" loop muted playsinline autoplay></video>
     </div>
 
     <script>
@@ -114,6 +114,9 @@
         const videoPosDisplay = document.getElementById('videoPos');
         const loadingBar = document.getElementById('loadingBar');
         const loadingProgress = document.getElementById('loadingProgress');
+        
+        let retryCount = 0;
+        const MAX_RETRIES = 5;
 
         const VIDEO_CYCLE_DURATION = 3 * 60 * 60;
         const REAL_DAY_DURATION = 24 * 60 * 60;
@@ -156,8 +159,19 @@
             
             console.log('Position calculée:', videoPosition, 'Vitesse:', PLAYBACK_RATE);
             
-            videoPlayer.play().catch(err => {
-                console.error('Erreur de lecture:', err);
+            videoPlayer.play().then(() => {
+                console.log('Lecture démarrée avec succès');
+                retryCount = 0;
+            }).catch(err => {
+                console.error('Tentative autoplay échouée:', err);
+                // Retry automatique
+                if (retryCount < MAX_RETRIES) {
+                    retryCount++;
+                    console.log(`Retry ${retryCount}/${MAX_RETRIES} dans 1 seconde...`);
+                    setTimeout(() => {
+                        startVideoPlayback();
+                    }, 1000);
+                }
             });
             
             updateInfo();
@@ -183,7 +197,14 @@
         videoPlayer.addEventListener('loadedmetadata', () => {
             console.log('Métadonnées chargées, durée:', videoPlayer.duration);
             setTimeout(() => loadingBar.classList.add('hidden'), 500);
-            startVideoPlayback();
+        });
+
+        videoPlayer.addEventListener('canplay', () => {
+            console.log('Vidéo prête à être lue');
+            // Démarrer dès que possible
+            if (videoPlayer.paused) {
+                startVideoPlayback();
+            }
         });
 
         videoPlayer.addEventListener('progress', () => {
@@ -213,8 +234,21 @@
             console.log('Début du chargement de la vidéo...');
         });
 
-        videoPlayer.addEventListener('canplay', () => {
-            console.log('Vidéo prête à être lue');
+        videoPlayer.addEventListener('playing', () => {
+            console.log('Lecture en cours');
+            retryCount = 0;
+        });
+
+        // Auto-retry si la vidéo se met en pause de manière inattendue
+        videoPlayer.addEventListener('pause', () => {
+            if (!videoPlayer.ended) {
+                console.warn('Vidéo en pause, redémarrage automatique...');
+                setTimeout(() => {
+                    if (videoPlayer.paused) {
+                        videoPlayer.play();
+                    }
+                }, 500);
+            }
         });
 
         videoPlayer.addEventListener('timeupdate', () => {
@@ -223,9 +257,11 @@
 
         setInterval(updateInfo, 1000);
 
-        document.addEventListener('click', () => {
-            if (videoPlayer.paused) {
-                videoPlayer.play();
+        // Forcer le démarrage immédiat au chargement de la page
+        window.addEventListener('load', () => {
+            console.log('Page chargée, tentative de lecture...');
+            if (videoPlayer.paused && videoPlayer.readyState >= 2) {
+                startVideoPlayback();
             }
         });
     </script>
